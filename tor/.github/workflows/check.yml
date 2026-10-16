@@ -1,0 +1,27 @@
+on: [workflow_call]
+
+name: "Check"
+
+permissions: {}
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout code
+        uses: actions/checkout@v7
+      - parallel:
+          -
+            name: Run ShellCheck
+            uses: ludeeus/action-shellcheck@master
+            env:
+              SHELLCHECK_OPTS: -x
+          -
+            name: Lint Dockerfile
+            uses: hadolint/hadolint-action@v3.5.0
+            with:
+              dockerfile: Dockerfile
+              ignore: DL3018
+              failure-threshold: warning
