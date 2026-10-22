@@ -4,6 +4,8 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:9050:9050"
+    environment:
+      TOR_BRIDGE: ${TOR_BRIDGE:-}
     restart: always
     healthcheck:
       test: ["CMD", "/usr/local/bin/healthcheck.sh"]

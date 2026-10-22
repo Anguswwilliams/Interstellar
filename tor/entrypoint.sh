@@ -155,6 +155,16 @@ configure_defaults() {
   HEALTHCHECK_SOCKS_PORT="$SOCKS_PORT"
   SOCKS_CONFIG="SocksPort 0.0.0.0:$SOCKS_PORT"
   HTTPS_PROXY_CONFIG="HTTPTunnelPort 0.0.0.0:$HTTPS_PROXY_PORT"
+  BRIDGE_CONFIG=""
+
+  if [ -n "${TOR_BRIDGE:-}" ]; then
+    BRIDGE_CONFIG=$(cat <<EOF
+UseBridges 1
+ClientTransportPlugin obfs4 exec /usr/bin/lyrebird
+Bridge obfs4 $TOR_BRIDGE
+EOF
+)
+  fi
 
   # Docker healthcheck defaults
 
@@ -268,6 +278,8 @@ $SOCKS_CONFIG
 
 # HTTPS proxy
 $HTTPS_PROXY_CONFIG
+
+$BRIDGE_CONFIG
 
 $CONTROL
 EOF
