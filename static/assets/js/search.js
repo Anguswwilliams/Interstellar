@@ -153,7 +153,7 @@ async function navigate(value, path, proxyOverride) {
 
   if (!isValidUrl(url)) {
     url = searchUrl + url;
-  } else if (!(url.startsWith("https://") || url.startsWith("http://"))) {
+  } else if (!/^https?:\/\//i.test(url)) {
     url = `https://${url}`;
   }
 
@@ -190,7 +190,21 @@ function blank(value, proxyOverride) {
 }
 
 function isValidUrl(val = "") {
-  return /^http(s?):\/\//.test(val) || (val.includes(".") && val[0] !== " ");
+  const hasHttpProtocol = /^https?:\/\//i.test(val);
+  let parsed;
+
+  try {
+    parsed = new URL(hasHttpProtocol ? val : `https://${val}`);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+  const hostname = parsed.hostname.toLowerCase();
+  if (hostname === "localhost" || (hostname.startsWith("[") && hostname.endsWith("]"))) return true;
+
+  const labels = (hostname.endsWith(".") ? hostname.slice(0, -1) : hostname).split(".");
+  return labels.length > 1 && labels.every(label => label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label));
 }
 
 (() => {
