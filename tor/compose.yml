@@ -1,8 +1,24 @@
 services:
   tor:
-    image: dockurr/tor
-    container_name: tor
+    build: .
     ports:
-      - 9050:9050
-      - 9051:9051
+      - "127.0.0.1:8080:8080"
+    restart: always
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 60s
+
+  interstellar:
+    build: ..
+    network_mode: "service:tor"
+    depends_on:
+      tor:
+        condition: service_started
+    environment:
+      PORT: 8080
+      TOR_SOCKS_HOST: 127.0.0.1
+      TOR_SOCKS_PORT: 9050
     restart: always

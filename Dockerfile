@@ -4,6 +4,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY ["package.json", "./"]
+COPY ["vendor/", "./vendor/"]
 
 RUN npm install
 

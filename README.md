@@ -83,6 +83,16 @@ npm i
 npm run start
 ```
 
+### Tor / Onion Access
+
+The Tor Compose setup routes Interstellar Wisp TCP traffic through Tor SOCKS5. Start both services with:
+
+```bash
+docker compose -f tor/compose.yml up --build
+```
+
+Open `http://127.0.0.1:8080`, select Scramjet, and navigate to an `.onion` address. The Tor SOCKS port is kept inside the Compose network, and the web interface is bound to localhost. UDP streams are disabled while Tor routing is enabled.
+
 ### Updating
 
 ```bash

@@ -1,0 +1,1 @@
+docker compose -f tor/compose.yml up -d --build

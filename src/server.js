@@ -9,10 +9,11 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import basicAuth from "express-basic-auth";
 import config from "../config.js";
+import { createBlockVerdict, setupFiltering } from "./filtering/index.js";
 // import { mountAnalytics } from "./analytics.js";
 import { mountGhGames } from "./games.js";
-import { createBlockVerdict, setupFiltering } from "./filtering/index.js";
 import { mountMasqr } from "./Masqr.js";
+import { TorTCPSocket } from "./tor-socks.js";
 import { injectVersionInfo, resolveVersionInfo } from "./version.js";
 
 console.log(chalk.yellow("🚀 Starting server..."));
@@ -61,6 +62,17 @@ const PORT = resolvePort();
 
 wisp.options.allow_loopback_ips = true;
 wisp.options.allow_private_ips = true;
+
+const torSocksHost = process.env.TOR_SOCKS_HOST?.trim();
+const torSocksPort = Number(process.env.TOR_SOCKS_PORT || 9050);
+if (torSocksHost) {
+  if (!Number.isInteger(torSocksPort) || torSocksPort < 1 || torSocksPort > 65535) {
+    throw new Error("TOR_SOCKS_PORT must be a valid TCP port");
+  }
+  wisp.options.allow_udp_streams = false;
+  wisp.options.dns_method = hostname => hostname;
+  console.log(chalk.green(`Wisp TCP traffic will use Tor SOCKS5 at ${torSocksHost}:${torSocksPort}`));
+}
 
 const escapeRegExp = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const blockedSiteMatchers = config.blockedSites.map(host => new RegExp(`(^|\\.)${escapeRegExp(host.trim().toLowerCase())}$`, "i"));
@@ -180,7 +192,16 @@ server.on("request", (req, res) => {
 
 server.on("upgrade", (req, socket, head) => {
   if (masqr && !masqr.isAuthorized(req)) return socket.destroy();
-  wisp.routeRequest(req, socket, head);
+  const connOptions = torSocksHost
+    ? {
+        TCPSocket: class extends TorTCPSocket {
+          constructor(hostname, port) {
+            super(hostname, port, torSocksHost, torSocksPort);
+          }
+        },
+      }
+    : undefined;
+  wisp.routeRequest(req, socket, head, connOptions);
 });
 
 server.on("listening", () => {
