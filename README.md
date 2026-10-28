@@ -76,22 +76,22 @@ pnpm start
 
 #### npm
 
-If you are using npm, run the following commands:
+Install and start Docker Desktop (or Docker Engine with Compose), then run these commands. `npm start` builds and starts Tor, waits for it to be healthy, and then starts Interstellar. Press Ctrl+C to stop Interstellar and the managed Tor service.
 
 ```bash
 npm i
-npm run start
+npm start
 ```
 
 ### Tor / Onion Access
 
-The Tor Compose setup routes Interstellar Wisp TCP traffic through Tor SOCKS5. Start both services with:
+The managed Tor service routes Interstellar Wisp TCP traffic through Tor SOCKS5. Open the address printed by Interstellar, select Scramjet, and navigate to an `.onion` address. The SOCKS port is bound to localhost, and UDP streams are disabled while Tor routing is enabled. To use an existing Tor SOCKS5 service instead, set `TOR_SOCKS_HOST` and optionally `TOR_SOCKS_PORT` before running `npm start`.
+
+For a fully containerized deployment, you can still start both services with:
 
 ```bash
 docker compose -f tor/compose.yml up --build
 ```
-
-Open `http://127.0.0.1:8080`, select Scramjet, and navigate to an `.onion` address. The Tor SOCKS port is kept inside the Compose network, and the web interface is bound to localhost. UDP streams are disabled while Tor routing is enabled.
 
 ### Updating
 
