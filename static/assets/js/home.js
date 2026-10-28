@@ -5,7 +5,6 @@ try {
 } catch (e) {
   inFrame = true;
 }
-if (!store.get("ab")) store.set("ab", true);
 if (!inFrame && !navigator.userAgent.includes("Firefox") && store.get("ab") === "true") {
   const popup = open("about:blank", "_blank");
   if (popup && !popup.closed) {

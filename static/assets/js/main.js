@@ -1,5 +1,10 @@
 // Theme is applied immediately, to prevent flashing on page load
 (() => {
+  if (store.get("abConfigured") !== "true") {
+    store.set("ab", false);
+    store.set("abConfigured", true);
+  }
+
   const themes = {
     black: "/assets/css/themes/dark/black.css",
     midnight: "/assets/css/themes/dark/midnight.css",
