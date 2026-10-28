@@ -46,16 +46,14 @@ if (!inFrame && !navigator.userAgent.includes("Firefox") && store.get("ab") === 
 }
 
 const SplashT = [
-  "Over 8 Million Users since 2023",
-  "Fastest growing proxy server",
-  "Made by xBubbo",
-  "Check out discord.gg/interstellar :)",
-  "Thanks for using the site",
-  "Follow us on Tiktok (@useinterstellar)",
-  "Subscribe to us on YouTube (@unblocking)",
-  "Subscribe to my Youtube (@xbubbo)",
-  "Check out the settings page",
-  "Check out our Patreon (https://www.patreon.com/gointerstellar)",
+  "Welcome to Interstellar",
+  "Fast, private browsing",
+  "Open a site or search from here",
+  "Customize your settings",
+  "Your next tab is ready",
+  "Browse without the clutter",
+  "Keep it simple and fast",
+  "Ready when you are",
 ];
 
 let SplashI = Math.floor(Math.random() * SplashT.length);
