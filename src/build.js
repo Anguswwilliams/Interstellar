@@ -34,19 +34,6 @@ const { scramjetPath } = require("@mercuryworkshop/scramjet/path");
 
 const TERSER_ONLY = new Set();
 
-function createCatalogueKey() {
-  return Array.from(randomBytes(16));
-}
-
-function encodeCatalogue(json, key) {
-  const bytes = Buffer.from(json, "utf8");
-  const out = Buffer.alloc(bytes.length);
-  for (let index = 0; index < bytes.length; index++) out[index] = bytes[index] ^ key[index % key.length];
-  return JSON.stringify(out.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
-}
-
-const UNUSED_JSON = ["apps.json", "games.json"];
-const RANDOMIZED_JSON = ["apps.min.json", "games.min.json"];
 const UNUSED_CSS = ["assets/css/themes/template.css"];
 
 const VENDOR_DROPPED_CONSOLE = ["console.log", "console.debug", "console.info", "console.warn"];
@@ -418,7 +405,6 @@ const RENAMED_IDENTIFIERS = [
   "$scramjetVersion",
   "$scramjetRequire",
   "$scramitize",
-  "isGamesPage",
   "encodeProxyUrl",
   "encodeProxyUrlSync",
   "__uv$config",
@@ -548,23 +534,19 @@ function applySwLocalRenames(source, renames) {
 // Inline onkeyup/onchange/onclick handlers call these app-owned globals by name, so the name
 // survives into emitted HTML. Renamed per build in both the JS definition and the handler
 // attribute; the on* attribute names themselves are standard and left untouched.
-// Two shapes: window.X property assignments, and bare function identifiers (def/call/reference).
-const INLINE_HANDLER_WINDOW = { "launcher.js": ["bar", "category"] };
 const INLINE_HANDLER_FUNCS = {
   "tabs.js": ["goHome", "goBack", "goForward", "reload", "popoutTab", "toggleDevTools", "toggleFullscreen"],
   "settings.js": ["toggleAB", "changeEngine", "exportSaveData", "importSaveData", "openAboutBlank"],
   "search.js": ["openUrl"],
-  "launcher.js": ["openUrl"],
 };
 const INLINE_HANDLER_ATTR = /(\son(?:keyup|change|click)\s*=\s*")([A-Za-z_$][\w$]*)(\s*\()/gi;
-// window.bar/category (2) + tabs.js funcs (9) + settings.js funcs (6) + search openUrl (1) + launcher openUrl (1).
-const INLINE_HANDLER_JS_COUNT = 19;
-// onkeyup/onchange (6) + onclick: tabs (7) + settings (2) + 404 openUrl (1).
-// openAboutBlank stays in settings.js but no longer has an inline caller in HTML.
-const INLINE_HANDLER_HTML_COUNT = 16;
+// Function definitions, calls, and references are renamed in tabs.js, settings.js, and search.js.
+const INLINE_HANDLER_JS_COUNT = 16;
+// Remaining inline handler attributes in tabs, settings, and error pages.
+const INLINE_HANDLER_HTML_COUNT = 12;
 
 function createHandlerRenames() {
-  const names = [...new Set([...Object.values(INLINE_HANDLER_WINDOW).flat(), ...Object.values(INLINE_HANDLER_FUNCS).flat()])];
+  const names = [...new Set(Object.values(INLINE_HANDLER_FUNCS).flat())];
   return new Map(names.map(name => [name, `_${randomBytes(5).toString("hex")}`]));
 }
 
@@ -604,17 +586,11 @@ function maskJsStrings(source) {
   return out;
 }
 
-// window.X (bar/category) are targeted exact strings. Function identifiers are renamed only at
-// code positions, excluding method access (the leading dot) and string occurrences (via the mask).
+// Function identifiers are renamed only at code positions, excluding method access (the leading
+// dot) and string occurrences (via the mask).
 function applyHandlerDefs(source, basename, renames) {
   let out = source;
   let changed = 0;
-  for (const name of INLINE_HANDLER_WINDOW[basename] ?? []) {
-    const from = `window.${name}`;
-    const n = out.split(from).length - 1;
-    out = replaceAll(out, from, `window.${renames.get(name)}`);
-    changed += n;
-  }
   for (const name of INLINE_HANDLER_FUNCS[basename] ?? []) {
     const masked = maskJsStrings(out);
     const re = new RegExp(`(?<![\\w$.])${name}(?![\\w$])`, "g");
@@ -668,9 +644,8 @@ function applyProxyChoiceValues(source) {
 
 // Per-build opaque page routes. build.js generates one map, writes it to the manifest for the
 // server, and rewrites the clean route literals in the application JS so the navbar and every
-// in-app navigation point at the same opaque paths. "/" (root) and "/play.html" (a compatibility
-// alias for the games page) are deliberately left clean and are not part of this map.
-const PAGE_ROUTES = ["/apps", "/games", "/tabs", "/settings", "/home"];
+// in-app navigation point at the same opaque paths. "/" (root) is deliberately left clean.
+const PAGE_ROUTES = ["/tabs", "/settings", "/home"];
 
 function createPageRoutes(registry) {
   const map = {};
@@ -687,24 +662,19 @@ function createPageRoutes(registry) {
   return map;
 }
 
-// Quoted-literal rewrites, so a route token can never match inside an asset path such as
-// "/assets/json/apps.min.json". Both the "/x" form (pathname comparisons, navigate targets) and the
-// navbar "/./x" form are covered; the bare "tabs" in launcher.js is a relative navigation target
-// that must become the absolute, opaque tabs route.
+// Quoted-literal rewrites cover both the "/x" form (pathname comparisons, navigate targets) and
+// the navbar "/./x" form. The bare "tabs" is a relative navigation target that must become the
+// absolute, opaque tabs route.
 function routeRewriteTable(routes) {
   return [
-    [`"/./games"`, `"${routes["/games"]}"`],
-    [`"/./apps"`, `"${routes["/apps"]}"`],
     [`"/./settings"`, `"${routes["/settings"]}"`],
-    [`"/games"`, `"${routes["/games"]}"`],
-    [`"/apps"`, `"${routes["/apps"]}"`],
     [`"/settings"`, `"${routes["/settings"]}"`],
     [`"/tabs"`, `"${routes["/tabs"]}"`],
     [`"/home"`, `"${routes["/home"]}"`],
     [`"tabs"`, `"${routes["/tabs"]}"`],
   ];
 }
-const ROUTE_REWRITE_COUNT = 16;
+const ROUTE_REWRITE_COUNT = 9;
 
 function applyRouteRewrites(source, table) {
   let count = 0;
@@ -1664,7 +1634,6 @@ async function build() {
   const uvPropertyName = `_${randomBytes(5).toString("hex")}`;
   const uvPrefixName = `_${randomBytes(4).toString("hex")}`;
   const scramjetStrings = createScramjetStrings();
-  const catalogueKey = createCatalogueKey();
   const pageRoutes = createPageRoutes(registry);
   console.log(
     `Page routes: ${Object.entries(pageRoutes)
@@ -1704,17 +1673,6 @@ async function build() {
   manifest.sw = registry.rootFile(".js");
   appPlan.set(swSource, { basename: "sw.js", publicPath: manifest.sw, fullPath: path.join(DIST_DIR, manifest.sw) });
 
-  // apps.json and games.json are byte-equivalent duplicates of the .min files that nothing
-  // fetches, so they are dropped rather than shipped as a second plaintext copy.
-  for (const name of UNUSED_JSON) await rm(path.join(DIST_DIR, "assets", "json", name), { force: true });
-
-  const jsonMoves = new Map();
-  for (const name of RANDOMIZED_JSON) {
-    const source = path.join(DIST_DIR, "assets", "json", name);
-    if (!(await exists(source))) throw new Error(`expected dataset ${name} is missing from dist/assets/json`);
-    jsonMoves.set(source, registry.file(".json"));
-  }
-
   for (const name of UNUSED_CSS) await rm(path.join(DIST_DIR, name), { force: true });
   const cssMoves = new Map();
   const cssByOldPublic = new Map();
@@ -1737,9 +1695,6 @@ async function build() {
   const rewriteMap = new Map();
   for (const spec of specs) {
     for (const variant of pathVariants(spec.old)) rewriteMap.set(variant, spec.publicPath);
-  }
-  for (const [source, publicPath] of jsonMoves) {
-    for (const variant of pathVariants(`/${path.relative(DIST_DIR, source).split(path.sep).join("/")}`)) rewriteMap.set(variant, publicPath);
   }
   for (const [oldPublic, newPublic] of cssByOldPublic) {
     for (const variant of pathVariants(oldPublic)) rewriteMap.set(variant, newPublic);
@@ -1772,15 +1727,6 @@ async function build() {
 
   const emitted = new Map();
   const references = [];
-
-  for (const [source, publicPath] of jsonMoves) {
-    const destination = path.join(DIST_DIR, publicPath);
-    await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, encodeCatalogue(applyRewrites(await readFile(source, "utf8"), rewrites), catalogueKey), "utf8");
-    await rm(source);
-    emitted.set(publicPath, destination);
-    console.log(chalk.green(`  + ${path.basename(source)} -> ${publicPath}`));
-  }
 
   let cssIn = 0;
   let cssOut = 0;
@@ -1917,7 +1863,6 @@ async function build() {
         output = handlerDefs.source;
         handlerJsCount += handlerDefs.changed;
         if (basename === "tabs.js") output = applyTabAttr(output, tabAttr);
-        if (basename === "launcher.js") output = patchOrFail(output, /const CATALOGUE_KEY = \[0\];/, `const CATALOGUE_KEY = ${JSON.stringify(catalogueKey)};`, "launcher.js catalogue key");
         references.push({ file: `${basename} (${publicPath})`, source: output });
 
         const terserOnly = TERSER_ONLY.has(basename);
@@ -1949,7 +1894,7 @@ async function build() {
   if (routeRewriteJs !== ROUTE_REWRITE_COUNT) throw new Error(`expected ${ROUTE_REWRITE_COUNT} page-route literals in application JS, rewrote ${routeRewriteJs}. Upstream changed.`);
   for (const ref of references) {
     if (!ref.file.includes(".js")) continue;
-    for (const stale of ['"/apps"', '"/games"', '"/tabs"', '"/./apps"', '"/./games"', '"/./settings"']) {
+    for (const stale of ['"/tabs"', '"/./settings"']) {
       if (ref.source.includes(stale)) throw new Error(`stale clean page-route literal ${stale} left in ${ref.file}`);
     }
   }

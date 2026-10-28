@@ -33,8 +33,6 @@ const addressBar = (() => {
 
   const INTERNAL_PAGES = {
     home: { route: "/home", title: "New Tab", displayUrl: "interstellar://newtab" },
-    apps: { route: "/apps", title: "Apps", displayUrl: "interstellar://apps" },
-    games: { route: "/games", title: "Games", displayUrl: "interstellar://games" },
     settings: { route: "/settings", title: "Settings", displayUrl: "interstellar://settings" },
   };
 

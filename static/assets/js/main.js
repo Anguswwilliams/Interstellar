@@ -314,8 +314,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <a class="icon" href="/home"><img alt="nav" id="nav-logo" src="${LogoUrl}"/></a>
       </div>
       <div class="nav-bar-right">
-        <a class="navbar-link" href="/./games"><i class="fa-solid fa-gamepad navbar-icon"></i>${obfuscateNav("Games")}</a>
-        <a class="navbar-link" href="/./apps"><i class="fa-solid fa-phone navbar-icon"></i>${obfuscateNav("Apps")}</a>
         <a class="navbar-link" href="/./settings"><i class="fa-solid fa-gear navbar-icon settings-icon"></i>${obfuscateNav("Settings")}</a>
       </div>`;
     nav.innerHTML = html;

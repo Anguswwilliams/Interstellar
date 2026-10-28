@@ -11,7 +11,6 @@ import basicAuth from "express-basic-auth";
 import config from "../config.js";
 import { createBlockVerdict, setupFiltering } from "./filtering/index.js";
 // import { mountAnalytics } from "./analytics.js";
-import { mountGhGames } from "./games.js";
 import { mountMasqr } from "./Masqr.js";
 import { TorTCPSocket } from "./tor-socks.js";
 import { injectVersionInfo, resolveVersionInfo } from "./version.js";
@@ -100,8 +99,6 @@ if (config.masqr?.enabled) {
   console.log(chalk.green("🔑 Masqr gate is enabled"));
 }
 
-mountGhGames(app);
-
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -158,9 +155,6 @@ if (!vendorMap) {
 }
 
 const routes = [
-  { path: "/apps", file: "apps.html" },
-  { path: "/games", file: "games.html" },
-  { path: "/play.html", file: "games.html" },
   { path: "/settings", file: "settings.html" },
   { path: "/tabs", file: "tabs.html" },
   { path: "/home", file: "home.html" },
@@ -168,8 +162,8 @@ const routes = [
 ];
 
 // In dist the build randomizes the page routes and records them in the vendor map, so serve each
-// page at its opaque path (build id vendorMap.routes). "/" and "/play.html" have no entry and stay
-// clean. In static/dev vendorMap is null, so the clean routes are used as-is.
+// page at its opaque path (build id vendorMap.routes). "/" has no entry and stays clean.
+// In static/dev vendorMap is null, so the clean routes are used as-is.
 routes.forEach(route => {
   const servePath = vendorMap?.routes?.[route.path] || route.path;
   app.get(servePath, (_req, res) => {
